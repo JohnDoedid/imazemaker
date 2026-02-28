@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>maze</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#ccc;font-family:monospace;}
+canvas{display:block;position:absolute;top:0;left:0;}
+
+/* ─── OVERLAY ──────────────────────────────────────── */
+#overlay{
+  position:absolute;inset:0;z-index:50;background:#000;
+  display:flex;flex-direction:column;align-items:flex-start;
+  padding:20px 22px 40px;overflow-y:auto;
+}
+#overlay pre{font-size:13px;line-height:1.6;color:#666;white-space:pre-wrap;}
+.hi{color:#ddd;}.dim{color:#333;}.grn{color:#3f3;}.yel{color:#fc0;}
+.slabel{font-size:11px;color:#333;margin:14px 0 6px;letter-spacing:.07em;text-transform:uppercase;}
+
+/* grid textarea */
+#gridInput{
+  width:100%;max-width:580px;min-height:150px;
+  background:#050505;border:1px solid #1e1e1e;color:#8c8;
+  font-family:monospace;font-size:13px;line-height:1.4;
+  padding:10px;resize:vertical;outline:none;caret-color:#3f3;
+}
+#gridInput::placeholder{color:#222;}
+#gridInput:focus{border-color:#2e2e2e;}
+
+.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+.cbtn{
+  font-family:monospace;font-size:12px;cursor:pointer;
+  padding:5px 13px;border:1px solid #282828;color:#484848;background:transparent;
+  transition:color .12s,border-color .12s;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.cbtn:hover,.cbtn:active{color:#888;border-color:#444;}
+.cbtn.primary{border-color:#3a3a3a;color:#3f3;border-color:#2a4a2a;}
+
+#valResult{font-size:12px;margin-top:7px;min-height:16px;color:#444;font-family:monospace;}
+#valResult.ok{color:#3f3;}
+#valResult.err{color:#f55;}
+
+/* mode / setting buttons */
+.mode-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px;}
+.mb{
+  font-family:monospace;font-size:12px;cursor:pointer;
+  padding:4px 10px;border:1px solid #1e1e1e;color:#3a3a3a;background:transparent;
+  transition:color .12s,border-color .12s;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.mb.on{color:#3f3;border-color:#1e3a1e;}
+
+#startBtn{
+  font-family:monospace;font-size:14px;cursor:pointer;
+  padding:10px 28px;border:1px solid #2a4a2a;color:#3f3;background:transparent;
+  margin-top:20px;letter-spacing:.08em;
+}
+#startBtn:active{background:#071407;}
+
+/* ─── HUD ───────────────────────────────────────── */
+#hud{
+  position:absolute;top:10px;left:10px;z-index:20;pointer-events:none;
+  font-size:11px;color:rgba(255,255,255,.35);line-height:1.8;
+}
+#pcHint{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:rgba(255,255,255,.18);pointer-events:none;
+  z-index:20;white-space:nowrap;letter-spacing:.04em;
+  display:none;transition:opacity .4s;
+}
+
+/* ─── MODES PANEL ───────────────────────────────── */
+#modeBtn{
+  position:absolute;top:10px;right:10px;z-index:20;pointer-events:all;
+  font-family:monospace;font-size:11px;padding:4px 9px;
+  border:1px solid #1e1e1e;color:#404040;background:rgba(0,0,0,.8);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+#modepanel{
+  position:absolute;top:34px;right:10px;z-index:21;pointer-events:all;
+  background:rgba(0,0,0,.95);border:1px solid #1e1e1e;
+  padding:10px 14px;display:none;min-width:170px;
+}
+#modepanel .mb{display:block;width:100%;margin:3px 0;text-align:left;}
+#modepanel .slabel{margin:8px 0 4px;}
+
+/* ─── MINIMAP ───────────────────────────────────── */
+#minimap{position:absolute;top:0;right:0;z-index:15;image-rendering:pixelated;opacity:.6;}
+
+/* ─── WIN ───────────────────────────────────────── */
+#win{
+  position:absolute;inset:0;z-index:40;
+  background:rgba(0,0,0,.78);display:none;
+  align-items:center;justify-content:center;
+}
+#win pre{color:#3f3;font-size:15px;text-align:center;line-height:1.8;}
+
+/* ─── JOYSTICKS ─────────────────────────────────── */
+#jleft,#jright{
+  position:absolute;bottom:22px;width:108px;height:108px;
+  border-radius:50%;border:1px solid rgba(255,255,255,.09);
+  background:rgba(255,255,255,.025);pointer-events:all;touch-action:none;
+}
+#jleft{left:18px;}#jright{right:18px;}
+.jdot{
+  position:absolute;width:34px;height:34px;border-radius:50%;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);
+  top:37px;left:37px;pointer-events:none;
+}
+
+/* ─── SWIPE HINT ────────────────────────────────── */
+#swipeHint{
+  position:absolute;bottom:56px;left:50%;transform:translateX(-50%);
+  font-size:22px;color:rgba(255,255,255,.06);pointer-events:none;
+  z-index:5;user-select:none;
+}
+</style>
+</head>
+<body>
+
+<canvas id="gc"></canvas>
+<canvas id="minimap"></canvas>
+
+<!-- ════════════════ OVERLAY ════════════════════════ -->
+<div id="overlay">
+
+<pre>
+<span class="hi">improved maze</span> <span class="dim">v0.55 — raycaster</span>
+
+  <span class="dim"># = wall   S = start   T = target   (space) = path</span>
+</pre>
+
+<div class="slabel">grid:</div>
+<textarea id="gridInput" spellcheck="false" placeholder="type or paste your maze here
+# = wall, S = start, T = target, spaces = open path
+any size — no limit
+
+leave blank to use a generated maze"></textarea>
+
+<div class="btn-row">
+  <button class="cbtn" id="validateBtn">&gt; VALIDATE</button>
+  <button class="cbtn" id="generateBtn">&gt; GENERATE NEW</button>
+</div>
+<div id="valResult">—</div>
+
+<div class="slabel">modes:</div>
+<div class="mode-row" id="omodes"></div>
+
+<div class="slabel">settings:</div>
+<div class="mode-row" id="osettings"></div>
+
+<pre style="margin-top:14px;font-size:12px;line-height:1.7;"><span class="dim">controls:
+  pc      — WASD move · mouse look (click canvas) · Shift sprint
+  mobile  — left stick move/strafe · right stick look
+            swipe center screen to turn + move
+  both    — arrow keys · HJKL · YUBN diagonals
+  M       — minimap toggle
+  ~       — modes panel
+  still kinda in progress there's no actual vr and some of the modes are a bit broken.
+  use monochrome for cool look
+  entity is dumb clanker</span></pre>
+
+<button id="startBtn">&gt; START</button>
+</div>
+
+<!-- ════════════════ HUD ════════════════════════════ -->
+<div id="hud"></div>
+<div id="pcHint">click to lock mouse · ESC to unlock</div>
+
+<!-- ════════════════ MODES PANEL ════════════════════ -->
+<button id="modeBtn">~ modes</button>
+<div id="modepanel"></div>
+
+<!-- ════════════════ WIN ════════════════════════════ -->
+<div id="win"><pre id="wintext"></pre></div>
+
+<!-- ════════════════ JOYSTICKS ══════════════════════ -->
+<div id="jleft"><div class="jdot" id="ldot"></div></div>
+<div id="jright"><div class="jdot" id="rdot"></div></div>
+<div id="swipeHint">+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CANVAS SETUP
+// ═══════════════════════════════════════════════════════════
+const gc  = document.getElementById('gc');
+const ctx = gc.getContext('2d');
+const mm  = document.getElementById('minimap');
+const mctx= mm.getContext('2d');
+const W   = window.innerWidth;
+const H   = window.innerHeight;
+gc.width  = W; gc.height = H;
+
+// ═══════════════════════════════════════════════════════════
+//  MODES + SETTINGS
+// ═══════════════════════════════════════════════════════════
+const MODES = {
+  lightsout: { label:'lights-out',  on:false },
+  mono:      { label:'monochrome',  on:false },
+  walls:     { label:'walls',       on:false },
+  entity:    { label:'entity',      on:false },
+  solaris:   { label:'solaris',     on:false },
+  nodepth:   { label:'nodepthcam',  on:false },
+};
+const SETTINGS = {
+  smooth:   { label:'smooth movement', on:true  },
+  joysticks:{ label:'joysticks',       on:true  },
+  swipe:    { label:'swipe zone',      on:true  },
+};
+
+function buildButtons(container, obj) {
+  container.innerHTML = '';
+  Object.entries(obj).forEach(([k, v]) => {
+    const b = document.createElement('button');
+    b.className = 'mb' + (v.on ? ' on' : '');
+    b.dataset.k = k;
+    b.textContent = `[${v.on?'X':'_'}] ${v.label}`;
+    b.addEventListener('click', () => toggleOpt(obj, k));
+    container.appendChild(b);
+  });
+}
+
+function toggleOpt(obj, k) {
+  obj[k].on = !obj[k].on;
+  // sync all buttons with this key
+  document.querySelectorAll(`[data-k="${k}"]`).forEach(b => {
+    b.classList.toggle('on', obj[k].on);
+    b.textContent = `[${obj[k].on?'X':'_'}] ${obj[k].label}`;
+  });
+  if (k === 'joysticks') {
+    const v = obj[k].on;
+    document.getElementById('jleft').style.opacity  = v ? '1' : '0';
+    document.getElementById('jright').style.opacity = v ? '1' : '0';
+    document.getElementById('jleft').style.pointerEvents  = v ? 'all' : 'none';
+    document.getElementById('jright').style.pointerEvents = v ? 'none' : 'none';
+  }
+  if (k === 'swipe') document.getElementById('swipeHint').style.opacity = obj[k].on ? '1' : '0';
+  if (k === 'smooth') resetVelocity();
+  // keep in-game panel fresh
+  syncModePanel();
+}
+
+buildButtons(document.getElementById('omodes'),    MODES);
+buildButtons(document.getElementById('osettings'), SETTINGS);
+
+const modeBtn = document.getElementById('modeBtn');
+const modePanel = document.getElementById('modepanel');
+function syncModePanel() {
+  if (modePanel.style.display === 'block') buildIngameModePanel();
+}
+function buildIngameModePanel() {
+  modePanel.innerHTML = '';
+  const ml = document.createElement('div'); ml.className='slabel'; ml.textContent='modes'; modePanel.appendChild(ml);
+  Object.entries(MODES).forEach(([k, v]) => {
+    const b = document.createElement('button');
+    b.className = 'mb' + (v.on ? ' on' : '');
+    b.dataset.k = k;
+    b.textContent = `[${v.on?'X':'_'}] ${v.label}`;
+    b.addEventListener('click', () => toggleOpt(MODES, k));
+    modePanel.appendChild(b);
+  });
+  const sl = document.createElement('div'); sl.className='slabel'; sl.textContent='settings'; modePanel.appendChild(sl);
+  Object.entries(SETTINGS).forEach(([k, v]) => {
+    const b = document.createElement('button');
+    b.className = 'mb' + (v.on ? ' on' : '');
+    b.dataset.k = k;
+    b.textContent = `[${v.on?'X':'_'}] ${v.label}`;
+    b.addEventListener('click', () => toggleOpt(SETTINGS, k));
+    modePanel.appendChild(b);
+  });
+}
+modeBtn.addEventListener('click', () => {
+  const open = modePanel.style.display === 'block';
+  modePanel.style.display = open ? 'none' : 'block';
+  if (!open) buildIngameModePanel();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  GRID PARSER + BFS VALIDATOR
+// ═══════════════════════════════════════════════════════════
+function parseText(txt) {
+  let lines = txt.split('\n');
+  while (lines.length && lines[lines.length-1].trim() === '') lines.pop();
+  while (lines.length && lines[0].trim() === '') lines.shift();
+  if (!lines.length) return null;
+  const w = Math.max(...lines.map(l => l.length));
+  const h = lines.length;
+  let sx=-1, sy=-1, tx=-1, ty=-1;
+  const map = [];
+  for (let y = 0; y < h; y++) {
+    const row = [];
+    const line = lines[y].padEnd(w, ' ');
+    for (let x = 0; x < w; x++) {
+      const c = line[x];
+      if      (c === '#')              { row.push(1); }
+      else if (c==='S'||c==='s')       { row.push(0); sx=x; sy=y; }
+      else if (c==='T'||c==='t')       { row.push(2); tx=x; ty=y; }
+      else                             { row.push(0); }
+    }
+    map.push(row);
+  }
+  return { map, sx, sy, tx, ty, w, h };
+}
+
+function bfsValidate({ map, sx, sy, tx, ty, w, h }) {
+  if (sx < 0) return { ok:false, msg:'no S (start) found' };
+  if (tx < 0) return { ok:false, msg:'no T (target) found' };
+  const vis = Array.from({length:h}, () => new Uint8Array(w));
+  const q = [[sx, sy]]; vis[sy][sx] = 1;
+  while (q.length) {
+    const [cx, cy] = q.shift();
+    if (cx===tx && cy===ty) return { ok:true, msg:`valid — ${w}×${h} cells, path exists ✓` };
+    for (const [dx,dy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
+      const nx=cx+dx, ny=cy+dy;
+      if (nx>=0&&nx<w&&ny>=0&&ny<h&&!vis[ny][nx]&&map[ny][nx]!==1) {
+        vis[ny][nx]=1; q.push([nx,ny]);
+      }
+    }
+  }
+  return { ok:false, msg:'no path from S to T — maze is unsolvable' };
+}
+
+const valBtn = document.getElementById('validateBtn');
+const valRes = document.getElementById('valResult');
+let customParsed = null;
+
+valBtn.addEventListener('click', () => {
+  const txt = document.getElementById('gridInput').value;
+  if (!txt.trim()) { valRes.className='err'; valRes.textContent='✗ grid is empty'; return; }
+  const p = parseText(txt);
+  if (!p) { valRes.className='err'; valRes.textContent='✗ could not parse grid'; return; }
+  const r = bfsValidate(p);
+  valRes.className = r.ok ? 'ok' : 'err';
+  valRes.textContent = (r.ok ? '✓ ' : '✗ ') + r.msg;
+  customParsed = r.ok ? p : null;
+});
+
+// ═══════════════════════════════════════════════════════════
+//  MAZE GENERATION
+// ═══════════════════════════════════════════════════════════
+const GR = 12, GC = 12;
+let MAP=[], MAP_H=0, MAP_W=0, START_X=1.5, START_Y=1.5, END_X=0, END_Y=0;
+
+function genMaze(rows, cols) {
+  const h=rows*2+1, w=cols*2+1;
+  const g = Array.from({length:h}, () => new Array(w).fill(1));
+  const vis = Array.from({length:rows}, () => new Array(cols).fill(false));
+  function carve(r,c) {
+    vis[r][c] = true;
+    const dirs = [[0,1],[1,0],[0,-1],[-1,0]].sort(()=>Math.random()-.5);
+    for (const [dr,dc] of dirs) {
+      const nr=r+dr, nc=c+dc;
+      if (nr>=0&&nr<rows&&nc>=0&&nc<cols&&!vis[nr][nc]) {
+        g[r*2+1+dr][c*2+1+dc]=0; g[nr*2+1][nc*2+1]=0; carve(nr,nc);
+      }
+    }
+  }
+  carve(0,0);
+  g[1][1]=0; g[h-2][w-2]=2;
+  return g;
+}
+
+function applyParsed(p) {
+  MAP=p.map; MAP_H=p.h; MAP_W=p.w;
+  START_X=p.sx+.5; START_Y=p.sy+.5;
+  END_X=p.tx; END_Y=p.ty;
+}
+function applyGenerated() {
+  const g = genMaze(GR, GC);
+  const h=g.length, w=g[0].length;
+  applyParsed({ map:g, sx:1, sy:1, tx:w-2, ty:h-2, w, h });
+}
+applyGenerated();
+
+document.getElementById('generateBtn').addEventListener('click', () => {
+  applyGenerated(); customParsed=null;
+  valRes.className=''; valRes.textContent='— new maze generated';
+});
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER + VELOCITY
+// ═══════════════════════════════════════════════════════════
+const player = { x:1.5, y:1.5, angle:0 };
+const vel    = { fwd:0, str:0, rot:0 };
+const FOV    = Math.PI/3;
+const RAYS   = Math.ceil(W/2);
+const MAXD   = 22;
+const CELL_PX = 5;
+
+function resetVelocity() { vel.fwd=0; vel.str=0; vel.rot=0; }
+
+function isFree(x, y) {
+  if (y<0||y>=MAP_H||x<0||x>=MAP_W) return false;
+  const t = MAP[Math.floor(y)][Math.floor(x)];
+  return t===0||t===2;
+}
+function applyVelocity() {
+  const sa = player.angle + Math.PI/2;
+  const nx = player.x + Math.cos(player.angle)*vel.fwd + Math.cos(sa)*vel.str;
+  const ny = player.y + Math.sin(player.angle)*vel.fwd + Math.sin(sa)*vel.str;
+  if (isFree(nx, player.y)) player.x = nx;
+  if (isFree(player.x, ny)) player.y = ny;
+  player.angle += vel.rot;
+}
+function smoothToward(cur, target, dt, accel, decel) {
+  const rate = target !== 0 ? Math.min(1, accel*dt) : Math.min(1, decel*dt);
+  return cur + (target - cur) * rate;
+}
+function updateVelocity(dt, tFwd, tStr, tRot) {
+  if (SETTINGS.smooth.on) {
+    vel.fwd = smoothToward(vel.fwd, tFwd, dt, 10, 16);
+    vel.str = smoothToward(vel.str, tStr, dt, 10, 16);
+    vel.rot = smoothToward(vel.rot, tRot, dt, 14, 18);
+  } else {
+    vel.fwd=tFwd; vel.str=tStr; vel.rot=tRot;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ENTITY
+// ═══════════════════════════════════════════════════════════
+let ent = { x:0, y:0, angle:Math.random()*Math.PI*2 };
+function resetEntity() { ent.x=END_X+.5; ent.y=END_Y+.5; ent.angle=Math.random()*Math.PI*2; }
+resetEntity();
+
+function updateEntity(dt) {
+  if (!MODES.entity.on) return;
+  const sp = 0.038 * dt * 60;
+  const nx = ent.x + Math.cos(ent.angle)*sp;
+  const ny = ent.y + Math.sin(ent.angle)*sp;
+  if (isFree(nx, ny)) { ent.x=nx; ent.y=ny; }
+  else ent.angle += Math.PI/2 + Math.random()*Math.PI/2;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DDA RAYCASTING
+// ═══════════════════════════════════════════════════════════
+function castRay(angle) {
+  const cos=Math.cos(angle), sin=Math.sin(angle);
+  let mx=Math.floor(player.x), my=Math.floor(player.y);
+  const ddx=Math.abs(1/cos), ddy=Math.abs(1/sin);
+  const sx=cos<0?-1:1, sy=sin<0?-1:1;
+  let sdx = cos<0 ? (player.x-mx)*ddx : (mx+1-player.x)*ddx;
+  let sdy = sin<0 ? (player.y-my)*ddy : (my+1-player.y)*ddy;
+  let side=0, wallType=0, dist=0;
+  for (let i=0; i<128; i++) {
+    if (sdx<sdy) { sdx+=ddx; mx+=sx; side=0; }
+    else         { sdy+=ddy; my+=sy; side=1; }
+    if (my<0||my>=MAP_H||mx<0||mx>=MAP_W) break;
+    const t = MAP[my][mx];
+    if (t!==0) {
+      wallType=t;
+      dist = side===0 ? (mx-player.x+(1-sx)/2)/cos
+                      : (my-player.y+(1-sy)/2)/sin;
+      break;
+    }
+  }
+  return { dist, side, wallType };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COLOR
+// ═══════════════════════════════════════════════════════════
+function wallRGB(wallType, side, d) {
+  const b = Math.max(0, 1-d/MAXD) * (side===1 ? .62 : 1.0);
+  if (MODES.mono.on) { const v=Math.floor(b*238); return [0,v,0]; }
+  if (wallType===2)  return [Math.floor(b*255), Math.floor(b*182), Math.floor(b*16)];
+  const n = Math.max(0, 1-d/MAXD);
+  return [Math.floor(b*198+n*24), Math.floor(b*198), Math.floor(b*218-n*14)];
+}
+function bgRGB(y) {
+  const half = H/2;
+  if (y >= half) {
+    const t = (y-half)/half;
+    if (MODES.mono.on)    return [0, Math.floor(t*38), 0];
+    if (MODES.solaris.on) return [Math.floor(52+t*78), Math.floor(22+t*26), 6];
+    if (MODES.lightsout.on) return [0,0,0];
+    const v = Math.floor(t*65); return [v,v,v];
+  } else {
+    const t = (half-y)/half;
+    if (MODES.mono.on)    return [0, Math.floor(t*16), 0];
+    if (MODES.solaris.on) return [6, Math.floor(16+t*42), Math.floor(26+t*85)];
+    if (MODES.lightsout.on) return [0,0,0];
+    const v = Math.floor(t*50+16); return [v, v, Math.floor(v*1.13)];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER SCENE
+// ═══════════════════════════════════════════════════════════
+const imgData = ctx.createImageData(W, H);
+const buf     = imgData.data;
+const zBuf    = new Float32Array(RAYS);
+const bgRowR  = new Uint8Array(H);
+const bgRowG  = new Uint8Array(H);
+const bgRowB  = new Uint8Array(H);
+let   bgDirty = true;
+let   lastModeHash = '';
+
+function modeHash() { return Object.values(MODES).map(m=>m.on?1:0).join(''); }
+function rebuildBG() {
+  for (let y=0; y<H; y++) {
+    const [r,g,b] = bgRGB(y);
+    bgRowR[y]=r; bgRowG[y]=g; bgRowB[y]=b;
+  }
+}
+
+function renderScene() {
+  const mh = modeHash();
+  if (mh !== lastModeHash) { rebuildBG(); lastModeHash=mh; bgDirty=false; }
+
+  // fill background from row cache
+  for (let y=0; y<H; y++) {
+    const r=bgRowR[y], g=bgRowG[y], b=bgRowB[y];
+    for (let x=0; x<W; x++) {
+      const i=(y*W+x)*4;
+      buf[i]=r; buf[i+1]=g; buf[i+2]=b; buf[i+3]=255;
+    }
+  }
+
+  const sliceW = W / RAYS;
+  for (let i=0; i<RAYS; i++) {
+    const ra = (player.angle - FOV/2) + (i/RAYS)*FOV;
+    const { dist, side, wallType } = castRay(ra);
+    const corrD = MODES.nodepth.on ? dist : dist * Math.cos(ra - player.angle);
+    zBuf[i] = corrD;
+    if (corrD <= 0 || corrD > MAXD) continue;
+
+    const wallH  = Math.min(H, (H/corrD) * .86);
+    const wallTop= Math.max(0, Math.floor((H-wallH)/2));
+    const wallBot= Math.min(H-1, Math.ceil((H+wallH)/2));
+    const [wr,wg,wb] = wallRGB(wallType, side, corrD);
+    const x0 = Math.floor(i*sliceW);
+    const x1 = Math.min(W-1, Math.ceil((i+1)*sliceW));
+
+    if (MODES.walls.on) {
+      for (let x=x0; x<=x1; x++) {
+        const it=(wallTop*W+x)*4; buf[it]=wr;buf[it+1]=wg;buf[it+2]=wb;buf[it+3]=255;
+        const ib=(wallBot*W+x)*4; buf[ib]=wr;buf[ib+1]=wg;buf[ib+2]=wb;buf[ib+3]=255;
+      }
+      if (i===0 || Math.abs(zBuf[i]-zBuf[Math.max(0,i-1)]) > .14)
+        for (let y=wallTop; y<=wallBot; y++) {
+          const iv=(y*W+x0)*4; buf[iv]=wr;buf[iv+1]=wg;buf[iv+2]=wb;buf[iv+3]=255;
+        }
+    } else {
+      for (let x=x0; x<=x1; x++)
+        for (let y=wallTop; y<=wallBot; y++) {
+          const idx=(y*W+x)*4;
+          buf[idx]=wr; buf[idx+1]=wg; buf[idx+2]=wb; buf[idx+3]=255;
+      
