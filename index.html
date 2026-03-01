@@ -858,7 +858,7 @@ document.addEventListener('mousemove', e => {
 gc.addEventListener('click', () => { if (!pointerLocked) requestPointerLock(); });
 
 function mouseInput() {
-  const rot = accMouseDX * .0055;
+  const rot = accMouseDX * .0255;
   accMouseDX = 0;
   return { fwd:0, str:0, rot };
 }
