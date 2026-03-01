@@ -657,9 +657,9 @@ function renderScene() {
   // Inspired by Catacombs of Solaris — frames bleed into each other
   if (MODES.solaris.on) {
     for (let i=0; i<buf.length; i+=4) {
-      buf[i]   = (buf[i]   * .58 + solarisBuf[i]   * .42) | 0;
-      buf[i+1] = (buf[i+1] * .58 + solarisBuf[i+1] * .42) | 0;
-      buf[i+2] = (buf[i+2] * .58 + solarisBuf[i+2] * .42) | 0;
+      buf[i]   = (buf[i]   * .45 + solarisBuf[i]   * .55) | 0;
+      buf[i+1] = (buf[i+1] * .45 + solarisBuf[i+1] * .55) | 0;
+      buf[i+2] = (buf[i+2] * .45 + solarisBuf[i+2] * .55) | 0;
     }
     // shift previous frame sideways by ~2px for extra mosh
     const shift = 2;
