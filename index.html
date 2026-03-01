@@ -792,7 +792,7 @@ document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 function keyboardInput() {
   const sprint = keys['shift'] ? 1.9 : 1;
-  const spd = .067*sprint, turn = .054;
+  const spd = .067*sprint, turn = .067;
   let fwd=0, str=0, rot=0;
   if (keys['w']||keys['arrowup']  ||keys['k'])  fwd+=spd;
   if (keys['s']||keys['arrowdown']||keys['j'])  fwd-=spd;
@@ -838,7 +838,7 @@ document.addEventListener('mousemove', e => {
 gc.addEventListener('click', () => { if (!pointerLocked) requestPointerLock(); });
 
 function mouseInput() {
-  const rot = accMouseDX * .0016;
+  const rot = accMouseDX * .0021;
   accMouseDX = 0;
   return { fwd:0, str:0, rot };
 }
@@ -881,7 +881,7 @@ bindJoy(document.getElementById('jright'), jR, document.getElementById('rdot'));
 function joystickInput() {
   if (!SETTINGS.joysticks.on) return { fwd:0, str:0, rot:0 };
   let fwd=0, str=0, rot=0;
-  if (jR.active) rot = jR.x/JMAX * .046;
+  if (jR.active) rot = jR.x/JMAX * .067;
   if (jL.active) {
     const boost = 1 + (Math.hypot(jL.x,jL.y)/JMAX)*.55;
     fwd = (-jL.y/JMAX) * .067*boost;
@@ -933,8 +933,8 @@ gc.addEventListener('touchcancel', e => {
 }, {passive:true});
 
 function swipeInput() {
-  const rot = swipeDX * .0030;
-  const fwd = -swipeDY * .0042;
+  const rot = swipeDX * .0040;
+  const fwd = -swipeDY * .0052;
   swipeDX=0; swipeDY=0;
   return { fwd, str:0, rot };
 }
