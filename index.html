@@ -812,19 +812,19 @@ document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 function keyboardInput() {
   const sprint = keys['shift'] ? 1.9 : 1;
-  const spd = .067*sprint, turn = .067;
+  const spd = .089*sprint, turn = .089;
   let fwd=0, str=0, rot=0;
   if (keys['w']||keys['arrowup']  ||keys['k'])  fwd+=spd;
   if (keys['s']||keys['arrowdown']||keys['j'])  fwd-=spd;
   if (keys['arrowleft'] ||keys['h'])             rot-=turn;
   if (keys['arrowright']||keys['l'])             rot+=turn;
-  if (keys['a'])  str-=spd*.72;
-  if (keys['d'])  str+=spd*.72;
+  if (keys['a'])  str-=spd*.89;
+  if (keys['d'])  str+=spd*.89;
   // diagonals
-  if (keys['y']) { fwd+=spd*.72; str-=spd*.72; }
-  if (keys['u']) { fwd+=spd*.72; str+=spd*.72; }
-  if (keys['b']) { fwd-=spd*.72; str-=spd*.72; }
-  if (keys['n']) { fwd-=spd*.72; str+=spd*.72; }
+  if (keys['y']) { fwd+=spd*.89; str-=spd*.89; }
+  if (keys['u']) { fwd+=spd*.89; str+=spd*.89; }
+  if (keys['b']) { fwd-=spd*.89; str-=spd*.89; }
+  if (keys['n']) { fwd-=spd*.89; str+=spd*.89; }
   return { fwd, str, rot };
 }
 
@@ -858,7 +858,7 @@ document.addEventListener('mousemove', e => {
 gc.addEventListener('click', () => { if (!pointerLocked) requestPointerLock(); });
 
 function mouseInput() {
-  const rot = accMouseDX * .0255;
+  const rot = accMouseDX * .0355;
   accMouseDX = 0;
   return { fwd:0, str:0, rot };
 }
