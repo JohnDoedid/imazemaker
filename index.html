@@ -657,9 +657,9 @@ function renderScene() {
   // Inspired by Catacombs of Solaris — frames bleed into each other
   if (MODES.solaris.on) {
     for (let i=0; i<buf.length; i+=4) {
-      buf[i]   = (buf[i]   * .45 + solarisBuf[i]   * .55) | 0;
-      buf[i+1] = (buf[i+1] * .45 + solarisBuf[i+1] * .55) | 0;
-      buf[i+2] = (buf[i+2] * .45 + solarisBuf[i+2] * .55) | 0;
+      buf[i]   = (buf[i]   * .35 + solarisBuf[i]   * .65) | 0;
+      buf[i+1] = (buf[i+1] * .35 + solarisBuf[i+1] * .65) | 0;
+      buf[i+2] = (buf[i+2] * .35 + solarisBuf[i+2] * .65) | 0;
     }
     // shift previous frame sideways by ~2px for extra mosh
     const shift = 2;
@@ -677,13 +677,32 @@ function renderScene() {
 
   // ── LIGHTS-OUT: radial vignette — heavy darkness at edges ──
   if (MODES.lightsout.on) {
-    const gr = ctx.createRadialGradient(W/2,H/2, H*.08, W/2,H/2, H*.62);
-    gr.addColorStop(0,   'rgba(0,0,0,0)');
-    gr.addColorStop(.55, 'rgba(0,0,0,.55)');
-    gr.addColorStop(1,   'rgba(0,0,0,.97)');
-    ctx.fillStyle=gr;
-    ctx.fillRect(0,0,W,H);
-  }
+  // outer pitch black
+  ctx.fillStyle = 'rgba(0,0,0,0.97)';
+  ctx.fillRect(0,0,W,H);
+
+  // torch light — warm flicker via perlin-ish noise on radius
+  const flicker = 1 + (Math.sin(Date.now()*.0031)*0.04 + Math.sin(Date.now()*.0077)*0.03);
+  const radius  = H * .38 * flicker;
+
+  const gr = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, radius);
+  gr.addColorStop(0,    'rgba(0,0,0,0)');
+  gr.addColorStop(.18,  'rgba(0,0,0,0)');
+  gr.addColorStop(.55,  'rgba(0,0,0,.5)');
+  gr.addColorStop(.78,  'rgba(0,0,0,.82)');
+  gr.addColorStop(1,    'rgba(0,0,0,1)');
+
+  ctx.fillStyle = gr;
+  ctx.fillRect(0,0,W,H);
+
+  // warm amber tint in the center (torch color)
+  const warmGr = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, radius * .5);
+  warmGr.addColorStop(0,   'rgba(255,140,20,.07)');
+  warmGr.addColorStop(.6,  'rgba(255,90,0,.03)');
+  warmGr.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.fillStyle = warmGr;
+  ctx.fillRect(0,0,W,H);
+}
 
   // ── ENTITY SPRITE ──────────────────────────────────────────
   if (MODES.entity.on) {
@@ -1055,3 +1074,4 @@ function startXR(session) {
 </script>
 </body>
 </html>
+solari
