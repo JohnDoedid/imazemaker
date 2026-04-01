@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>The Ultimate Maze Challenge</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #e8e8e8;
+            color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        #menu {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border: 5px solid #000;
+            box-shadow: 0 8px 0 #000;
+            max-width: 90vw;
+        }
+        
+        h1 {
+            color: #d92027;
+            font-size: clamp(1.5em, 6vw, 2.5em);
+            font-weight: bold;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+        
+        .subtitle {
+            font-size: clamp(0.8em, 2vw, 1em);
+            color: #000;
+            margin-bottom: 25px;
+            font-weight: normal;
+        }
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .input-group {
+            background: #f0f0f0;
+            padding: 15px;
+            border: 3px solid #000;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: clamp(0.8em, 2vw, 0.9em);
+            color: #000;
+            font-weight: bold;
+        }
+        
+        input {
+            padding: 10px;
+            font-size: clamp(0.9em, 2.5vw, 1.1em);
+            width: 100%;
+            border: 3px solid #000;
+            background: white;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #2196f3;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+        
+        button {
+            background: #2196f3;
+            color: white;
+            border: 4px solid #000;
+            padding: 15px 30px;
+            font-size: clamp(0.9em, 2.5vw, 1.1em);
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 5px 0 #000;
+        }
+        
+        button:hover {
+            background: #1976d2;
+        }
+        
+        button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #000;
+        }
+        
+        button.secondary {
+            background: #d92027;
+        }
+        
+        button.secondary:hover {
+            background: #b01520;
+        }
+        
+        #gameContainer {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100vh;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        #stats {
+            background: white;
+            padding: 15px 30px;
+            font-size: clamp(0.8em, 2vw, 1em);
+            border: 4px solid #000;
+            box-shadow: 0 5px 0 #000;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stat-label {
+            color: #000;
+            font-weight: normal;
+        }
+        
+        .stat-value {
+            color: #d92027;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        #gameWrapper {
+            border: 6px solid #000;
+            box-shadow: 0 8px 0 #000;
+            background: white;
+            max-width: 95vw;
+            max-height: 70vh;
+            overflow: hidden;
+        }
+        
+        #svgGame {
+            display: block;
+            max-width: 100%;
+            max-height: 70vh;
+        }
+        
+        .warning {
+            color: #d92027;
+            font-size: clamp(0.7em, 2vw, 0.9em);
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        
+        #mobileControls {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .control-pad {
+            display: grid;
+            grid-template-areas: 
+                ". up ."
+                "left . right"
+                ". down .";
+            gap: 10px;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border: 4px solid #000;
+            font-size: 1.5em;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 0 #000;
+        }
+        
+        .control-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #000;
+            background: #2196f3;
+            color: white;
+        }
+        
+        .up { grid-area: up; }
+        .down { grid-area: down; }
+        .left { grid-area: left; }
+        .right { grid-area: right; }
+        
+        #scoreBoard {
+            background: white;
+            padding: 25px;
+            border: 4px solid #000;
+            margin-top: 15px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        
+        #scoreBoard h3 {
+            color: #000;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+        }
+        
+        .score-entry {
+            padding: 8px;
+            margin: 4px 0;
+            background: #f0f0f0;
+            border-left: 4px solid #2196f3;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+        }
+        
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: block;
+            }
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <h1>WORLD'S HARDEST MAZE</h1>
+        <p class="subtitle">Touch wall = Death</p>
+        
+        <div class="controls-grid">
+            <div class="input-group">
+                <label>WIDTH</label>
+                <input type="number" id="widthInput" value="40" min="20" max="80">
+            </div>
+            
+            <div class="input-group">
+                <label>HEIGHT</label>
+                <input type="number" id="heightInput" value="40" min="20" max="80">
+            </div>
+            
+            <div class="input-group">
+                <label>ENEMIES</label>
+                <input type="number" id="killersInput" value="15" min="5" max="50">
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button onclick="startGame()">START</button>
+            <button class="secondary" onclick="toggleScores()">SCORES</button>
+        </div>
+        
+        <p class="warning">WARNING: This game is extremely difficult</p>
+        
+        <div id="scoreBoard" style="display: none;">
+            <h3>BEST SCORES</h3>
+            <div id="scoreList"></div>
+        </div>
+    </div>
+
+    <div id="gameContainer">
+        <div id="stats">
+            <div class="stat-item">
+                <span class="stat-label">DEATHS:</span>
+                <span class="stat-value" id="deaths">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">TIME:</span>
+                <span class="stat-value" id="time">0.0s</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">LEVEL:</span>
+                <span class="stat-value" id="level">1</span>
+            </div>
+        </div>
+        
+        <div id="gameWrapper">
+            <svg id="svgGame" xmlns="http://www.w3.org/2000/svg">
+                <g id="mazeGroup"></g>
+                <g id="goalGroup"></g>
+                <g id="killersGroup"></g>
+                <g id="playerGroup"></g>
+            </svg>
+        </div>
+        
+        <div id="mobileControls">
+            <div class="control-pad">
+                <div class="control-btn up" id="upBtn">▲</div>
+                <div class="control-btn down" id="downBtn">▼</div>
+                <div class="control-btn left" id="leftBtn">◀</div>
+                <div class="control-btn right" id="rightBtn">▶</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const svg = document.getElementById('svgGame');
+        const mazeGroup = document.getElementById('mazeGroup');
+        const playerGroup = document.getElementById('playerGroup');
+        const killersGroup = document.getElementById('killersGroup');
+        const goalGroup = document.getElementById('goalGroup');
+        
+        let maze, player, killers, goal;
+        let cellSize = 16;
+        let mazeWidth, mazeHeight;
+        let deaths = 0;
+        let startTime, animationId;
+        let keys = {};
+        let mobileKeys = {};
+        let currentLevel = 1;
+        
+        // Bytebeat audio setup
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let bytebeatPlaying = false;
+        let currentBytebeat = 0; // 0 or 1
+        let bytebeatBuffer = null;
+        let bytebeatSource = null;
+        
+        // Bytebeat formulas
+        function bytebeat1(t) {
+            const r = t / 7938;
+            const a = 619, b = 1180;
+            const notes = [a, a, 601, 584, b, b, 55, 38];
+            const index = (Math.floor(r / 8) & 7) + ((r & 15) == 7 ? 1 : 0);
+            const note = notes[index];
+            const freq = note >> (Math.floor(r * 18) % 12 & 12) & 15;
+            
+            const v1 = (t * Math.pow(2, freq / 12) & 128) * Math.max(((2981555643 >> (Math.floor(r * 2) & 30) & 3) - r % 1) / 4, 0) * 0.9;
+            const v2 = (t * Math.pow(2, ((546914935 >> (Math.floor(r / 2) & 28) & 15) - 5 * (14576 >> (r & 15) & 1)) / 12) & 511) * ((3204176859 >> (Math.floor(r * 2) & 30) & 3) - r % 1) * 0.07;
+            
+            return v1 + v2;
+        }
+        
+        function bytebeat2(t) {
+            const T = t / 5000;
+            const b = Math.abs((T & 31) - 16);
+            const K = 1 + ((1 - (T >> 5 & 3)) % 2 - 1) / 6;
+            
+            const M = (T) => {
+                const part1 = (t * Math.pow(2, ([-1, 4, 7][Math.floor(T * 4) % 3 | 0] / 12 + K)) & 128) * (T >> 8 && (12 - T % 12)) / 12;
+                const part2 = (t * Math.pow(2, (K + Math.floor(b / 5) - (5514 >> (b % (T >> 9 ? 4 : 5)) * 4 & 15) / 12)) & 128);
+                return part1 + part2;
+            };
+            
+            return M(T) / 3 + M(T - 3) / 5 + (T >> 7 && (t * Math.pow(2, ((T & 4 && (T & 7) - 1) / 6 - 4)) & 63 * (197 >> T % 8 & 1)) + Math.random() * 32 * (1 - (T + 4) % 8 / 8));
+        }
+        
+        function createBytebeatBuffer(formula, duration = 10) {
+            const sampleRate = 44100;
+            const length = sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, length, sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < length; i++) {
+                let value = formula(i);
+                // Normalize to -1 to 1 range
+                value = ((value & 255) - 128) / 128;
+                data[i] = Math.max(-1, Math.min(1, value * 0.3)); // Reduce volume
+            }
+            
+            return buffer;
+        }
+        
+        function playBytebeat() {
+            if (bytebeatSource) {
+                bytebeatSource.stop();
+            }
+            
+            const formula = currentBytebeat === 0 ? bytebeat1 : bytebeat2;
+            bytebeatBuffer = createBytebeatBuffer(formula, 10);
+            
+            bytebeatSource = audioCtx.createBufferSource();
+            bytebeatSource.buffer = bytebeatBuffer;
+            bytebeatSource.connect(audioCtx.destination);
+            bytebeatSource.loop = false;
+            
+            bytebeatSource.onended = () => {
+                if (bytebeatPlaying) {
+                    currentBytebeat = 1 - currentBytebeat; // Toggle between 0 and 1
+                    playBytebeat();
+                }
+            };
+            
+            bytebeatSource.start();
+        }
+        
+        function startBytebeat() {
+            if (!bytebeatPlaying) {
+                bytebeatPlaying = true;
+                audioCtx.resume().then(() => {
+                    playBytebeat();
+                });
+            }
+        }
+        
+        function stopBytebeat() {
+            bytebeatPlaying = false;
+            if (bytebeatSource) {
+                bytebeatSource.stop();
+                bytebeatSource = null;
+            }
+        }
+        
+        // Score management
+        function saveScore(time, deaths, level) {
+            const scores = JSON.parse(localStorage.getItem('mazeScores') || '[]');
+            scores.push({
+                time: time,
+                deaths: deaths,
+                level: level,
+                date: new Date().toISOString()
+            });
+            scores.sort((a, b) => (a.deaths * 100 + a.time) - (b.deaths * 100 + b.time));
+            localStorage.setItem('mazeScores', JSON.stringify(scores.slice(0, 10)));
+        }
+        
+        function loadScores() {
+            const scores = JSON.parse(localStorage.getItem('mazeScores') || '[]');
+            const scoreList = document.getElementById('scoreList');
+            scoreList.innerHTML = '';
+            
+            if (scores.length === 0) {
+                scoreList.innerHTML = '<p style="color: #8899bb; text-align: center;">No scores yet!</p>';
+                return;
+            }
+            
+            scores.forEach((score, i) => {
+                const entry = document.createElement('div');
+                entry.className = 'score-entry';
+                entry.innerHTML = `
+                    <span>${i + 1}. Level ${score.level}</span>
+                    <span>Deaths: ${score.deaths} | Time: ${score.time.toFixed(1)}s</span>
+                `;
+                scoreList.appendChild(entry);
+            });
+        }
+        
+        function toggleScores() {
+            const board = document.getElementById('scoreBoard');
+            if (board.style.display === 'none') {
+                loadScores();
+                board.style.display = 'block';
+            } else {
+                board.style.display = 'none';
+            }
+        }
+
+        function startGame() {
+            mazeWidth = parseInt(document.getElementById('widthInput').value);
+            mazeHeight = parseInt(document.getElementById('heightInput').value);
+            const numKillers = parseInt(document.getElementById('killersInput').value);
+            
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'flex';
+            
+            // Set SVG size
+            const maxWidth = Math.min(window.innerWidth * 0.9, 900);
+            const maxHeight = Math.min(window.innerHeight * 0.65, 650);
+            
+            const aspectRatio = mazeWidth / mazeHeight;
+            let svgWidth = maxWidth;
+            let svgHeight = svgWidth / aspectRatio;
+            
+            if (svgHeight > maxHeight) {
+                svgHeight = maxHeight;
+                svgWidth = svgHeight * aspectRatio;
+            }
+            
+            cellSize = Math.floor(Math.min(svgWidth / mazeWidth, svgHeight / mazeHeight));
+            
+            svg.setAttribute('width', mazeWidth * cellSize);
+            svg.setAttribute('height', mazeHeight * cellSize);
+            svg.setAttribute('viewBox', `0 0 ${mazeWidth * cellSize} ${mazeHeight * cellSize}`);
+            
+            generateMaze();
+            initPlayer();
+            initKillers(numKillers);
+            drawMaze();
+            drawGoal();
+            drawPlayer();
+            drawKillers();
+            
+            deaths = 0;
+            currentLevel = 1;
+            startTime = Date.now();
+            document.getElementById('level').textContent = currentLevel;
+            
+            startBytebeat();
+            setupMobileControls();
+            gameLoop();
+        }
+
+        function setupMobileControls() {
+            const buttons = {
+                upBtn: 'ArrowUp',
+                downBtn: 'ArrowDown',
+                leftBtn: 'ArrowLeft',
+                rightBtn: 'ArrowRight'
+            };
+            
+            for (const [btnId, key] of Object.entries(buttons)) {
+                const btn = document.getElementById(btnId);
+                
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    mobileKeys[key] = true;
+                });
+                
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    mobileKeys[key] = false;
+                });
+                
+                btn.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    mobileKeys[key] = true;
+                });
+                
+                btn.addEventListener('mouseup', (e) => {
+                    e.preventDefault();
+                    mobileKeys[key] = false;
+                });
+            }
+        }
+
+        function generateMaze() {
+            maze = Array(mazeHeight).fill().map(() => Array(mazeWidth).fill(1));
+            
+            const stack = [];
+            const startX = 0;
+            const startY = 0;
+            
+            maze[startY][startX] = 0;
+            stack.push([startX, startY]);
+            
+            const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+            
+            while (stack.length > 0) {
+                const [x, y] = stack[stack.length - 1];
+                const neighbors = [];
+                
+                for (const [dx, dy] of directions) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    
+                    if (nx >= 0 && nx < mazeWidth && ny >= 0 && ny < mazeHeight && maze[ny][nx] === 1) {
+                        neighbors.push([nx, ny, dx, dy]);
+                    }
+                }
+                
+                if (neighbors.length > 0) {
+                    const [nx, ny, dx, dy] = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    maze[ny][nx] = 0;
+                    maze[y + dy/2][x + dx/2] = 0;
+                    stack.push([nx, ny]);
+                } else {
+                    stack.pop();
+                }
+            }
+            
+            goal = {
+                x: (mazeWidth - 1) * cellSize + cellSize/2,
+                y: (mazeHeight - 1) * cellSize + cellSize/2
+            };
+            maze[mazeHeight - 1][mazeWidth - 1] = 0;
+            if (mazeWidth > 1) maze[mazeHeight - 1][mazeWidth - 2] = 0;
+            if (mazeHeight > 1) maze[mazeHeight - 2][mazeWidth - 1] = 0;
+        }
+
+        function drawMaze() {
+            mazeGroup.innerHTML = '';
+            
+            for (let y = 0; y < mazeHeight; y++) {
+                for (let x = 0; x < mazeWidth; x++) {
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', x * cellSize);
+                    rect.setAttribute('y', y * cellSize);
+                    rect.setAttribute('width', cellSize);
+                    rect.setAttribute('height', cellSize);
+                    
+                    if (maze[y][x] === 1) {
+                        // Walls - black
+                        rect.setAttribute('fill', '#000');
+                        rect.setAttribute('stroke', '#000');
+                        rect.setAttribute('stroke-width', '1');
+                    } else {
+                        // Paths - white
+                        rect.setAttribute('fill', '#fff');
+                        rect.setAttribute('stroke', '#ddd');
+                        rect.setAttribute('stroke-width', '0.5');
+                    }
+                    
+                    mazeGroup.appendChild(rect);
+                }
+            }
+        }
+
+        function initPlayer() {
+            player = {
+                x: cellSize/2,
+                y: cellSize/2,
+                radius: cellSize * 0.35,
+                speed: 3
+            };
+        }
+
+        function drawPlayer() {
+            playerGroup.innerHTML = '';
+            
+            // Simple blue circle
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', player.x);
+            circle.setAttribute('cy', player.y);
+            circle.setAttribute('r', player.radius);
+            circle.setAttribute('fill', '#2196f3');
+            circle.setAttribute('stroke', '#1565c0');
+            circle.setAttribute('stroke-width', '2');
+            playerGroup.appendChild(circle);
+        }
+
+        function initKillers(num) {
+            killers = [];
+            for (let i = 0; i < num; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * mazeWidth);
+                    y = Math.floor(Math.random() * mazeHeight);
+                } while (maze[y][x] === 1 || (x === 0 && y === 0) || (x === mazeWidth - 1 && y === mazeHeight - 1));
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1.5 + Math.random() * 2;
+                
+                killers.push({
+                    x: x * cellSize + cellSize/2,
+                    y: y * cellSize + cellSize/2,
+                    radius: cellSize * 0.3,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed
+                });
+            }
+        }
+
+        function drawKillers() {
+            killersGroup.innerHTML = '';
+            
+            killers.forEach((killer) => {
+                // Simple red square
+                const square = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                const size = killer.radius * 2;
+                square.setAttribute('x', killer.x - size/2);
+                square.setAttribute('y', killer.y - size/2);
+                square.setAttribute('width', size);
+                square.setAttribute('height', size);
+                square.setAttribute('fill', '#d92027');
+                square.setAttribute('stroke', '#8b0000');
+                square.setAttribute('stroke-width', '2');
+                killersGroup.appendChild(square);
+            });
+        }
+
+        function drawGoal() {
+            goalGroup.innerHTML = '';
+            
+            // Simple yellow circle
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', goal.x);
+            circle.setAttribute('cy', goal.y);
+            circle.setAttribute('r', cellSize * 0.4);
+            circle.setAttribute('fill', '#ffd700');
+            circle.setAttribute('stroke', '#b8860b');
+            circle.setAttribute('stroke-width', '2');
+            goalGroup.appendChild(circle);
+        }
+
+        function checkWallCollision(x, y, radius) {
+            const cellX = Math.floor(x / cellSize);
+            const cellY = Math.floor(y / cellSize);
+            
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const checkX = cellX + dx;
+                    const checkY = cellY + dy;
+                    
+                    if (checkX >= 0 && checkX < mazeWidth && checkY >= 0 && checkY < mazeHeight) {
+                        if (maze[checkY][checkX] === 1) {
+                            const wallLeft = checkX * cellSize;
+                            const wallRight = (checkX + 1) * cellSize;
+                            const wallTop = checkY * cellSize;
+                            const wallBottom = (checkY + 1) * cellSize;
+                            
+                            const closestX = Math.max(wallLeft, Math.min(x, wallRight));
+                            const closestY = Math.max(wallTop, Math.min(y, wallBottom));
+                            
+                            const distX = x - closestX;
+                            const distY = y - closestY;
+                            const dist = Math.sqrt(distX * distX + distY * distY);
+                            
+                            if (dist < radius) return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function resetPlayer() {
+            deaths++;
+            document.getElementById('deaths').textContent = deaths;
+            initPlayer();
+            
+            // Death sound
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = 80;
+            osc.type = 'sawtooth';
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
+
+        function updatePlayer() {
+            let dx = 0, dy = 0;
+            
+            const isUp = keys['ArrowUp'] || keys['w'] || mobileKeys['ArrowUp'];
+            const isDown = keys['ArrowDown'] || keys['s'] || mobileKeys['ArrowDown'];
+            const isLeft = keys['ArrowLeft'] || keys['a'] || mobileKeys['ArrowLeft'];
+            const isRight = keys['ArrowRight'] || keys['d'] || mobileKeys['ArrowRight'];
+            
+            if (isLeft) dx -= player.speed;
+            if (isRight) dx += player.speed;
+            if (isUp) dy -= player.speed;
+            if (isDown) dy += player.speed;
+            
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.707;
+                dy *= 0.707;
+            }
+            
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+            
+            if (!checkWallCollision(newX, player.y, player.radius)) {
+                player.x = newX;
+            } else {
+                resetPlayer();
+                return;
+            }
+            
+            if (!checkWallCollision(player.x, newY, player.radius)) {
+                player.y = newY;
+            } else {
+                resetPlayer();
+                return;
+            }
+            
+            const distToGoal = Math.sqrt((player.x - goal.x)**2 + (player.y - goal.y)**2);
+            if (distToGoal < player.radius + cellSize * 0.3) {
+                stopBytebeat();
+                const finalTime = ((Date.now() - startTime) / 1000);
+                
+                // Victory sound sequence
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.frequency.value = freq;
+                        osc.type = 'sine';
+                        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.5);
+                    }, i * 120);
+                });
+                
+                saveScore(finalTime, deaths, currentLevel);
+                
+                setTimeout(() => {
+                    alert(`YOU WON!\n\nTime: ${finalTime.toFixed(2)}s\nDeaths: ${deaths}\nLevel: ${currentLevel}\n\nScore saved!`);
+                    location.reload();
+                }, 500);
+            }
+        }
+
+        function updateKillers() {
+            for (const killer of killers) {
+                killer.x += killer.vx;
+                killer.y += killer.vy;
+                
+                if (checkWallCollision(killer.x, killer.y, killer.radius)) {
+                    killer.vx *= -1;
+                    killer.vy *= -1;
+                    killer.x += killer.vx * 2;
+                    killer.y += killer.vy * 2;
+                }
+                
+                if (killer.x < killer.radius || killer.x > svg.getAttribute('width') - killer.radius) {
+                    killer.vx *= -1;
+                }
+                if (killer.y < killer.radius || killer.y > svg.getAttribute('height') - killer.radius) {
+                    killer.vy *= -1;
+                }
+                
+                const dist = Math.sqrt((player.x - killer.x)**2 + (player.y - killer.y)**2);
+                if (dist < player.radius + killer.radius) {
+                    resetPlayer();
+                }
+            }
+        }
+
+        function gameLoop() {
+            updatePlayer();
+            updateKillers();
+            drawPlayer();
+            drawKillers();
+            
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            document.getElementById('time').textContent = elapsed + 's';
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        svg.addEventListener('contextmenu', (e) => e.preventDefault());
+    </script>
+</body>
+</html>
