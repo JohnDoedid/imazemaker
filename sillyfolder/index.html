@@ -381,6 +381,114 @@
     </div>
 
     <script>
+        const svg = document.getElementByIconst audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let bytebeatPlaying = false;
+let bytebeatNode = null;
+let workletInitialized = false;
+
+// We package the formulas into an AudioWorkletProcessor.
+// This runs the generation on a background thread so your game doesn't lag.
+const workletCode = `
+    function bytebeat1(t) {
+        const r = t / 7938;
+        const a = 619, b = 1180;
+        const notes = [a, a, 601, 584, b, b, 55, 38];
+        const index = (Math.floor(r / 8) & 7) + ((r & 15) == 7 ? 1 : 0);
+        const note = notes[index];
+        const freq = note >> (Math.floor(r * 18) % 12 & 12) & 15;
+        
+        const v1 = (t * Math.pow(2, freq / 12) & 128) * Math.max(((2981555643 >> (Math.floor(r * 2) & 30) & 3) - r % 1) / 4, 0) * 0.9;
+        const v2 = (t * Math.pow(2, ((546914935 >> (Math.floor(r / 2) & 28) & 15) - 5 * (14576 >> (r & 15) & 1)) / 12) & 511) * ((3204176859 >> (Math.floor(r * 2) & 30) & 3) - r % 1) * 0.07;
+        
+        return v1 + v2;
+    }
+    
+    function bytebeat2(t) {
+        const T = t / 5000;
+        const b = Math.abs((T & 31) - 16);
+        const K = 1 + ((1 - (T >> 5 & 3)) % 2 - 1) / 6;
+        
+        const M = (T) => {
+            const part1 = (t * Math.pow(2, ([-1, 4, 7][Math.floor(T * 4) % 3 | 0] / 12 + K)) & 128) * (T >> 8 && (12 - T % 12)) / 12;
+            const part2 = (t * Math.pow(2, (K + Math.floor(b / 5) - (5514 >> (b % (T >> 9 ? 4 : 5)) * 4 & 15) / 12)) & 128);
+            return part1 + part2;
+        };
+        
+        return M(T) / 3 + M(T - 3) / 5 + (T >> 7 && (t * Math.pow(2, ((T & 4 && (T & 7) - 1) / 6 - 4)) & 63 * (197 >> T % 8 & 1)) + Math.random() * 32 * (1 - (T + 4) % 8 / 8));
+    }
+
+    class BytebeatProcessor extends AudioWorkletProcessor {
+        constructor() {
+            super();
+            this.t = 0;
+            this.currentBytebeat = 0;
+            this.sampleRate = 44100;
+            this.durationSamples = this.sampleRate * 3600; // 1 hour per track
+        }
+
+        process(inputs, outputs, parameters) {
+            const output = outputs[0];
+            const channel = output[0];
+            
+            for (let i = 0; i < channel.length; i++) {
+                // Calculate exactly one sample on the fly
+                let value = this.currentBytebeat === 0 ? bytebeat1(this.t) : bytebeat2(this.t);
+                
+                // Normalize to -1 to 1 range and reduce volume
+                value = ((value & 255) - 128) / 128;
+                channel[i] = Math.max(-1, Math.min(1, value * 0.3)); 
+                
+                this.t++;
+                
+                // Switch tracks seamlessly every hour
+                if (this.t >= this.durationSamples) {
+                    this.t = 0;
+                    this.currentBytebeat = 1 - this.currentBytebeat;
+                }
+            }
+            return true; // Keep the processor alive
+        }
+    }
+
+    registerProcessor('bytebeat-processor', BytebeatProcessor);
+`;
+
+// Call this function before the game starts to compile the audio worker
+async function initBytebeat() {
+    if (workletInitialized) return;
+    const blob = new Blob([workletCode], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    await audioCtx.audioWorklet.addModule(url);
+    workletInitialized = true;
+}
+
+// Call this on user interaction (like a "Start Game" button click)
+async function startBytebeat() {
+    if (!bytebeatPlaying) {
+        bytebeatPlaying = true;
+        
+        // Ensure context is awake
+        if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+        }
+        
+        // Ensure worklet is loaded just in case it wasn't pre-loaded
+        await initBytebeat();
+        
+        if (!bytebeatNode) {
+            bytebeatNode = new AudioWorkletNode(audioCtx, 'bytebeat-processor');
+            bytebeatNode.connect(audioCtx.destination);
+        }
+    }
+}
+
+function stopBytebeat() {
+    bytebeatPlaying = false;
+    if (bytebeatNode) {
+        bytebeatNode.disconnect();
+        bytebeatNode = null;
+    }
+}
         const svg = document.getElementById('svgGame');
         const mazeGroup = document.getElementById('mazeGroup');
         const playerGroup = document.getElementById('playerGroup');
@@ -396,97 +504,7 @@
         let mobileKeys = {};
         let currentLevel = 1;
         
-        // Bytebeat audio setup
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let bytebeatPlaying = false;
-        let currentBytebeat = 0; // 0 or 1
-        let bytebeatBuffer = null;
-        let bytebeatSource = null;
         
-        // Bytebeat formulas
-        function bytebeat1(t) {
-            const r = t / 7938;
-            const a = 619, b = 1180;
-            const notes = [a, a, 601, 584, b, b, 55, 38];
-            const index = (Math.floor(r / 8) & 7) + ((r & 15) == 7 ? 1 : 0);
-            const note = notes[index];
-            const freq = note >> (Math.floor(r * 18) % 12 & 12) & 15;
-            
-            const v1 = (t * Math.pow(2, freq / 12) & 128) * Math.max(((2981555643 >> (Math.floor(r * 2) & 30) & 3) - r % 1) / 4, 0) * 0.9;
-            const v2 = (t * Math.pow(2, ((546914935 >> (Math.floor(r / 2) & 28) & 15) - 5 * (14576 >> (r & 15) & 1)) / 12) & 511) * ((3204176859 >> (Math.floor(r * 2) & 30) & 3) - r % 1) * 0.07;
-            
-            return v1 + v2;
-        }
-        
-        function bytebeat2(t) {
-            const T = t / 5000;
-            const b = Math.abs((T & 31) - 16);
-            const K = 1 + ((1 - (T >> 5 & 3)) % 2 - 1) / 6;
-            
-            const M = (T) => {
-                const part1 = (t * Math.pow(2, ([-1, 4, 7][Math.floor(T * 4) % 3 | 0] / 12 + K)) & 128) * (T >> 8 && (12 - T % 12)) / 12;
-                const part2 = (t * Math.pow(2, (K + Math.floor(b / 5) - (5514 >> (b % (T >> 9 ? 4 : 5)) * 4 & 15) / 12)) & 128);
-                return part1 + part2;
-            };
-            
-            return M(T) / 3 + M(T - 3) / 5 + (T >> 7 && (t * Math.pow(2, ((T & 4 && (T & 7) - 1) / 6 - 4)) & 63 * (197 >> T % 8 & 1)) + Math.random() * 32 * (1 - (T + 4) % 8 / 8));
-        }
-        
-        function createBytebeatBuffer(formula, duration = 3600) {
-            const sampleRate = 44100;
-            const length = sampleRate * duration;
-            const buffer = audioCtx.createBuffer(1, length, sampleRate);
-            const data = buffer.getChannelData(0);
-            
-            for (let i = 0; i < length; i++) {
-                let value = formula(i);
-                // Normalize to -1 to 1 range
-                value = ((value & 255) - 128) / 128;
-                data[i] = Math.max(-1, Math.min(1, value * 0.3)); // Reduce volume
-            }
-            
-            return buffer;
-        }
-        
-        function playBytebeat() {
-            if (bytebeatSource) {
-                bytebeatSource.stop();
-            }
-            
-            const formula = currentBytebeat === 0 ? bytebeat1 : bytebeat2;
-            bytebeatBuffer = createBytebeatBuffer(formula, 3600);
-            
-            bytebeatSource = audioCtx.createBufferSource();
-            bytebeatSource.buffer = bytebeatBuffer;
-            bytebeatSource.connect(audioCtx.destination);
-            bytebeatSource.loop = false;
-            
-            bytebeatSource.onended = () => {
-                if (bytebeatPlaying) {
-                    currentBytebeat = 1 - currentBytebeat; // Toggle between 0 and 1
-                    playBytebeat();
-                }
-            };
-            
-            bytebeatSource.start();
-        }
-        
-        function startBytebeat() {
-            if (!bytebeatPlaying) {
-                bytebeatPlaying = true;
-                audioCtx.resume().then(() => {
-                    playBytebeat();
-                });
-            }
-        }
-        
-        function stopBytebeat() {
-            bytebeatPlaying = false;
-            if (bytebeatSource) {
-                bytebeatSource.stop();
-                bytebeatSource = null;
-            }
-        }
         
         // Score management
         function saveScore(time, deaths, level) {
