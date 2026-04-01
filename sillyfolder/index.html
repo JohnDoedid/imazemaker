@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>The Ultimate Maze Challenge</title>
+    <title>worlds hardest maze game</title>
 
     <style>
         * {
@@ -15,6 +15,7 @@
         
         body {
             font-family: Arial, sans-serif;
+            -webkit-text-stroke: 10px #000000;
             background: #e8e8e8;
             color: #000;
             display: flex;
@@ -29,7 +30,7 @@
             text-align: center;
             background: white;
             padding: 30px;
-            border: 5px solid #000;
+            border: 0px solid #000;
             box-shadow: 0 8px 0 #000;
             max-width: 90vw;
         }
@@ -263,17 +264,17 @@
 </head>
 <body>
     <div id="menu">
-        <h1>WORLD'S HARDEST MAZE</h1>
-        <p class="subtitle">Touch wall = Death</p>
+        <h1>world's HARDEST maze</h1>
+        <p class="subtitle">touch wall = DEAD</p>
         
         <div class="controls-grid">
             <div class="input-group">
-                <label>WIDTH</label>
+                <label>width</label>
                 <input type="number" id="widthInput" value="40" min="20" max="80">
             </div>
             
             <div class="input-group">
-                <label>HEIGHT</label>
+                <label>height</label>
                 <input type="number" id="heightInput" value="40" min="20" max="80">
             </div>
             
@@ -288,10 +289,10 @@
             <button class="secondary" onclick="toggleScores()">SCORES</button>
         </div>
         
-        <p class="warning">WARNING: This game is extremely difficult</p>
+        <p class="warning">WARNING: this game is extremely hard</p>
         
         <div id="scoreBoard" style="display: none;">
-            <h3>BEST SCORES</h3>
+            <h3>YOUR TOP SCORES</h3>
             <div id="scoreList"></div>
         </div>
     </div>
@@ -383,7 +384,7 @@
             return M(T) / 3 + M(T - 3) / 5 + (T >> 7 && (t * Math.pow(2, ((T & 4 && (T & 7) - 1) / 6 - 4)) & 63 * (197 >> T % 8 & 1)) + Math.random() * 32 * (1 - (T + 4) % 8 / 8));
         }
         
-        function createBytebeatBuffer(formula, duration = 10) {
+        function createBytebeatBuffer(formula, duration = 3600) {
             const sampleRate = 44100;
             const length = sampleRate * duration;
             const buffer = audioCtx.createBuffer(1, length, sampleRate);
@@ -405,7 +406,7 @@
             }
             
             const formula = currentBytebeat === 0 ? bytebeat1 : bytebeat2;
-            bytebeatBuffer = createBytebeatBuffer(formula, 10);
+            bytebeatBuffer = createBytebeatBuffer(formula, 3600);
             
             bytebeatSource = audioCtx.createBufferSource();
             bytebeatSource.buffer = bytebeatBuffer;
