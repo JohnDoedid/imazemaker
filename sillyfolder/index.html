@@ -522,15 +522,16 @@
         
         const brutalMessages = [
             "THAT WAS TOO EASY\nQUIT NOW",
-            "YOU'RE WASTING YOUR TIME",
-            "STILL HERE?\nPATHETIC",
+            "YOU ARE WASTING YOUR TIME",
+            "STILL HERE?\nYOU ARE PATHETIC",
             "NOBODY CARES\nSTOP PLAYING",
             "THIS IS MEANINGLESS\nGIVE UP",
             "YOU THINK YOU'RE GOOD?\nYOU'RE NOT",
             "ANOTHER LEVEL?\nWHY BOTHER",
             "YOUR EFFORT IS POINTLESS",
             "STILL TRYING?\nEMBARRASSING",
-            "JUST QUIT ALREADY"
+            "JUST QUIT ALREADY!!!!",
+            "YOU ARE SUCK\ning"
         ];
         
         function saveScore(time, deaths, level) {
@@ -676,64 +677,85 @@
         }
 
         function generateMaze() {
-            maze = Array(mazeHeight).fill().map(() => Array(mazeWidth).fill(1));
+    maze = Array(mazeHeight).fill().map(() => Array(mazeWidth).fill(1));
+    
+    const stack = [];
+    const startX = 0;
+    const startY = 0;
+    
+    maze[startY][startX] = 0;
+    stack.push([startX, startY]);
+    
+    const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+    
+    // THE GROWING TREE: MIX OF DFS AND PRIM'S FOR UNPREDICTABLE PATHS
+    while (stack.length > 0) {
+        // 75% chance for DFS (long paths), 25% chance for Prim's (chaotic branching)
+        let index = stack.length - 1;
+        if (Math.random() < 0.25) {
+            index = Math.floor(Math.random() * stack.length);
+        }
+        
+        const [x, y] = stack[index];
+        const neighbors = [];
+        
+        for (const [dx, dy] of directions) {
+            const nx = x + dx;
+            const ny = y + dy;
             
-            const stack = [];
-            const startX = 0;
-            const startY = 0;
-            
-            maze[startY][startX] = 0;
-            stack.push([startX, startY]);
-            
-            const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
-            
-            while (stack.length > 0) {
-                const [x, y] = stack[stack.length - 1];
-                const neighbors = [];
+            if (nx >= 0 && nx < mazeWidth && ny >= 0 && ny < mazeHeight && maze[ny][nx] === 1) {
+                neighbors.push([nx, ny, dx, dy]);
+            }
+        }
+        
+        if (neighbors.length > 0) {
+            const [nx, ny, dx, dy] = neighbors[Math.floor(Math.random() * neighbors.length)];
+            maze[ny][nx] = 0;
+            maze[y + dy/2][x + dx/2] = 0;
+            stack.push([nx, ny]);
+        } else {
+            stack.splice(index, 1);
+        }
+    }
+    
+    // SMART BRAIDING: ELIMINATE DEAD ENDS TO CREATE CONFUSING INFINITE LOOPS
+    for (let y = 0; y < mazeHeight; y += 2) {
+        for (let x = 0; x < mazeWidth; x += 2) {
+            if (maze[y][x] === 0) {
+                let walls = [];
+                if (y > 0 && maze[y-1][x] === 1) walls.push([x, y-1]);
+                if (y < mazeHeight - 1 && maze[y+1][x] === 1) walls.push([x, y+1]);
+                if (x > 0 && maze[y][x-1] === 1) walls.push([x-1, y]);
+                if (x < mazeWidth - 1 && maze[y][x+1] === 1) walls.push([x+1, y]);
                 
-                for (const [dx, dy] of directions) {
-                    const nx = x + dx;
-                    const ny = y + dy;
+                // If the path is a dead end (exactly 3 surrounding walls)
+                if (walls.length === 3 && Math.random() < 0.6) {
+                    // Find a wall that successfully connects to an already existing path
+                    const validWalls = walls.filter(([wx, wy]) => {
+                        const acrossX = x + (wx - x) * 2;
+                        const acrossY = y + (wy - y) * 2;
+                        return acrossX >= 0 && acrossX < mazeWidth && 
+                               acrossY >= 0 && acrossY < mazeHeight && 
+                               maze[acrossY][acrossX] === 0;
+                    });
                     
-                    if (nx >= 0 && nx < mazeWidth && ny >= 0 && ny < mazeHeight && maze[ny][nx] === 1) {
-                        neighbors.push([nx, ny, dx, dy]);
-                    }
-                }
-                
-                if (neighbors.length > 0) {
-                    const [nx, ny, dx, dy] = neighbors[Math.floor(Math.random() * neighbors.length)];
-                    maze[ny][nx] = 0;
-                    maze[y + dy/2][x + dx/2] = 0;
-                    stack.push([nx, ny]);
-                } else {
-                    stack.pop();
-                }
-            }
-            
-            // Add loops
-            for (let y = 1; y < mazeHeight - 1; y++) {
-                for (let x = 1; x < mazeWidth - 1; x++) {
-                    if (maze[y][x] === 1 && Math.random() < 0.3) {
-                        let pathCount = 0;
-                        if (maze[y-1][x] === 0) pathCount++;
-                        if (maze[y+1][x] === 0) pathCount++;
-                        if (maze[y][x-1] === 0) pathCount++;
-                        if (maze[y][x+1] === 0) pathCount++;
-                        
-                        if (pathCount >= 2) {
-                            maze[y][x] = 0;
-                        }
+                    if (validWalls.length > 0) {
+                        const [wx, wy] = validWalls[Math.floor(Math.random() * validWalls.length)];
+                        maze[wy][wx] = 0; // Break the wall
                     }
                 }
             }
-            
-            goal = {
-                x: (mazeWidth - 1) * cellSize + cellSize/2,
-                y: (mazeHeight - 1) * cellSize + cellSize/2
-            };
-            maze[mazeHeight - 1][mazeWidth - 1] = 0;
-            if (mazeWidth > 1) maze[mazeHeight - 1][mazeWidth - 2] = 0;
-            if (mazeHeight > 1) maze[mazeHeight - 2][mazeWidth - 1] = 0;
+        }
+    }
+    
+    // STANDARD GOAL ASSIGNMENT
+    goal = {
+        x: (mazeWidth - 1) * cellSize + cellSize/2,
+        y: (mazeHeight - 1) * cellSize + cellSize/2
+    };
+    maze[mazeHeight - 1][mazeWidth - 1] = 0;
+    if (mazeWidth > 1) maze[mazeHeight - 1][mazeWidth - 2] = 0;
+    if (mazeHeight > 1) maze[mazeHeight - 2][mazeWidth - 1] = 0;
         }
 
         function drawMaze() {
