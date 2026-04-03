@@ -846,43 +846,61 @@
         }
         function updateKillers() {
     killers.forEach(killer => {
-        // Calculate where they want to move THIS frame
-        let nextX = killer.x + (killer.dir[0] * killer.speed);
-        let nextY = killer.y + (killer.dir[1] * killer.speed);
-
-        // Find out exactly what grid cell they are currently in
+        // Find current grid cell
         let gridX = Math.floor(killer.x / cellSize);
         let gridY = Math.floor(killer.y / cellSize);
-
-        // Calculate the exact pixel center of this grid cell
+        
+        // Calculate center of current cell
         let centerX = (gridX * cellSize) + (cellSize / 2);
         let centerY = (gridY * cellSize) + (cellSize / 2);
-
-        // MAGIC TRICK: Did they cross the center point during this exact frame?
+        
+        // Calculate next position
+        let nextX = killer.x + (killer.dir[0] * killer.speed);
+        let nextY = killer.y + (killer.dir[1] * killer.speed);
+        
+        // Check if crossing center point
         let crossedX = (killer.dir[0] > 0 && killer.x <= centerX && nextX >= centerX) ||
                        (killer.dir[0] < 0 && killer.x >= centerX && nextX <= centerX);
                        
         let crossedY = (killer.dir[1] > 0 && killer.y <= centerY && nextY >= centerY) ||
                        (killer.dir[1] < 0 && killer.y >= centerY && nextY <= centerY);
-
-        // If they just hit the dead center of a cell...
+        
+        // When at center, decide direction
         if (crossedX || crossedY) {
-            // 1. SNAP them perfectly to the center to prevent drifting/clipping
+            // Snap to center
             killer.x = centerX;
             killer.y = centerY;
-
-            // 2. Look at the NEXT cell in their current direction
-            let nextGridX = gridX + killer.dir[0];
-            let nextGridY = gridY + killer.dir[1];
-
-            // 3. Check if the next cell is a wall (assuming maze[y][x] === 1 is a wall)
-            // We also check if maze[nextGridY] exists so we don't crash on the edges
-            if (!maze[nextGridY] || maze[nextGridY][nextGridX] === 1) {
-                // BOUNCE: Reverse their direction completely!
-                killer.dir = [-killer.dir[0], -killer.dir[1]];
+            
+            // Get available directions from this cell
+            const possibleDirs = [];
+            const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // up, right, down, left
+            
+            dirs.forEach(dir => {
+                let checkX = gridX + dir[0];
+                let checkY = gridY + dir[1];
+                
+                // Check bounds and walls
+                if (checkX >= 0 && checkX < mazeWidth && 
+                    checkY >= 0 && checkY < mazeHeight && 
+                    maze[checkY][checkX] === 0) {
+                    possibleDirs.push(dir);
+                }
+            });
+            
+            // Don't go backwards unless it's the only option
+            const forward = possibleDirs.filter(d => 
+                !(d[0] === -killer.dir[0] && d[1] === -killer.dir[1])
+            );
+            
+            if (forward.length > 0) {
+                // Pick random direction (not backwards)
+                killer.dir = forward[Math.floor(Math.random() * forward.length)];
+            } else if (possibleDirs.length > 0) {
+                // Only backwards available
+                killer.dir = possibleDirs[0];
             }
         } else {
-            // If they aren't at the center yet, just keep moving normally
+            // Keep moving
             killer.x = nextX;
             killer.y = nextY;
         }
