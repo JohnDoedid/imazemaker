@@ -844,6 +844,50 @@
                 killersGroup.appendChild(square);
             });
         }
+        function updateKillers() {
+    killers.forEach(killer => {
+        // Calculate where they want to move THIS frame
+        let nextX = killer.x + (killer.dir[0] * killer.speed);
+        let nextY = killer.y + (killer.dir[1] * killer.speed);
+
+        // Find out exactly what grid cell they are currently in
+        let gridX = Math.floor(killer.x / cellSize);
+        let gridY = Math.floor(killer.y / cellSize);
+
+        // Calculate the exact pixel center of this grid cell
+        let centerX = (gridX * cellSize) + (cellSize / 2);
+        let centerY = (gridY * cellSize) + (cellSize / 2);
+
+        // MAGIC TRICK: Did they cross the center point during this exact frame?
+        let crossedX = (killer.dir[0] > 0 && killer.x <= centerX && nextX >= centerX) ||
+                       (killer.dir[0] < 0 && killer.x >= centerX && nextX <= centerX);
+                       
+        let crossedY = (killer.dir[1] > 0 && killer.y <= centerY && nextY >= centerY) ||
+                       (killer.dir[1] < 0 && killer.y >= centerY && nextY <= centerY);
+
+        // If they just hit the dead center of a cell...
+        if (crossedX || crossedY) {
+            // 1. SNAP them perfectly to the center to prevent drifting/clipping
+            killer.x = centerX;
+            killer.y = centerY;
+
+            // 2. Look at the NEXT cell in their current direction
+            let nextGridX = gridX + killer.dir[0];
+            let nextGridY = gridY + killer.dir[1];
+
+            // 3. Check if the next cell is a wall (assuming maze[y][x] === 1 is a wall)
+            // We also check if maze[nextGridY] exists so we don't crash on the edges
+            if (!maze[nextGridY] || maze[nextGridY][nextGridX] === 1) {
+                // BOUNCE: Reverse their direction completely!
+                killer.dir = [-killer.dir[0], -killer.dir[1]];
+            }
+        } else {
+            // If they aren't at the center yet, just keep moving normally
+            killer.x = nextX;
+            killer.y = nextY;
+        }
+    });
+        }
 
         function drawGoal() {
             goalGroup.innerHTML = '';
@@ -1007,57 +1051,7 @@
             gameLoop();
         }
 
-        function updateKillers() {
-            for (const killer of killers) {
-                const gridX = Math.floor(killer.x / cellSize);
-                const gridY = Math.floor(killer.y / cellSize);
-                
-                killer.x += killer.dir[0] * killer.speed;
-                killer.y += killer.dir[1] * killer.speed;
-                
-                const newGridX = Math.floor(killer.x / cellSize);
-                const newGridY = Math.floor(killer.y / cellSize);
-                
-                if (checkWallCollision(killer.x, killer.y, killer.radius) || 
-                    newGridX !== gridX || newGridY !== gridY) {
-                    
-                    killer.x = gridX * cellSize + cellSize/2;
-                    killer.y = gridY * cellSize + cellSize/2;
-                    
-                    const possibleDirs = [];
-                    const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-                    
-                    for (const dir of dirs) {
-                        const testX = gridX + dir[0];
-                        const testY = gridY + dir[1];
-                        
-                        if (testX >= 0 && testX < mazeWidth && 
-                            testY >= 0 && testY < mazeHeight && 
-                            maze[testY][testX] === 0 &&
-                            !(dir[0] === -killer.dir[0] && dir[1] === -killer.dir[1])) {
-                            possibleDirs.push(dir);
-                        }
-                    }
-                    
-                    const canContinue = possibleDirs.some(d => 
-                        d[0] === killer.dir[0] && d[1] === killer.dir[1]
-                    );
-                    
-                    if (canContinue && Math.random() < 0.7) {
-                        // Continue straight
-                    } else if (possibleDirs.length > 0) {
-                        killer.dir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
-                    } else {
-                        killer.dir = [-killer.dir[0], -killer.dir[1]];
-                    }
-                }
-                
-                const dist = Math.sqrt((player.x - killer.x)**2 + (player.y - killer.y)**2);
-                if (dist < player.radius + killer.radius) {
-                    resetPlayer();
-                }
-            }
-        }
+    
 
         function gameLoop() {
             updatePlayer();
