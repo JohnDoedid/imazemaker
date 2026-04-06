@@ -812,7 +812,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 function keyboardInput() {
-  const sprint = keys['shift'] ? 1.9 : 1;
+  const sprint = keys['shift'] ? 2.5 : 1;
   const spd = .089*sprint+1, turn = .089;
   let fwd=0, str=0, rot=0;
   if (keys['w']||keys['arrowup']  ||keys['k'])  fwd+=spd;
